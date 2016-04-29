@@ -1,28 +1,31 @@
 #include <iostream>
 #include <Magick++.h>
-#include "device_launch_parameters.h"
-#include "cuda.h"
-#include "cuda_runtime.h"
-#include "cuda_device_runtime_api.h"
+#include <fstream>
 
-#define FH 5
-#define FW 5
-#define HANDLE_ERROR( err ) (HandleError( err, __FILE__, __LINE__ ))
-const int BLOCK_SIZE=50;
+#define FH 3
+#define FW 3
+>>>>>>> Stashed changes
 using namespace std;
 using namespace Magick;
 typedef unsigned int ui;
 
 ui dimX, dimY;
-double factor = 1.0/9.0;
+double factor = 1.0/13.0;
 double bias = 0.0;
-int filter[FW][FH] = 
+/*int filter[FW][FH] = 
 {
 	1, 0, 0, 0, 0,
 	0, 1, 0, 0, 0,
 	0, 0, 1, 0, 0,
 	0, 0, 0, 1, 0,
 	0, 0, 0, 0, 1,
+};*/
+
+int filter[FW][FH] = 
+{
+	-1, -1, -1,
+	-1, 9, -1,
+	-1, -1, -1
 };
 
 
@@ -36,7 +39,7 @@ static void HandleError( cudaError_t err,
     }
 }
 
-__global__ void convoluteOnDevice(ui* dRed, ui* dGreen, ui* dBlue, ui* dFilter,
+/*__global__ void convoluteOnDevice(ui* dRed, ui* dGreen, ui* dBlue, ui* dFilter,
 						ui* resultRed, ui* resultGreen, ui* resultBlue, int dimX, int dimY) {
     ui valRed = 0;
     ui valGreen = 0;
@@ -62,7 +65,7 @@ __global__ void convoluteOnDevice(ui* dRed, ui* dGreen, ui* dBlue, ui* dFilter,
     resultRed[row * dimX + col] = factor * valRed + bias;
     resultGreen[row * dimX + col] = factor * valGreen + bias;
     resultBlue[row * dimX + col] = factor * valBlue + bias;
-}
+}*/
 
 
 int main(int argc, char *argv[]) {
@@ -88,33 +91,23 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	ui* dRed;
-	ui* dGreen;
-	ui* dBlue;
-	ui* resultRed;
-	ui* resultGreen;
-	ui* resultBlue;
-	ui* dFilter;
+	ofstream fileRed("red");
+	ofstream fileGreen("green");
+	ofstream fileBlue("blue");
 
-    cudaMalloc((void**) &dRed, dimX * dimY * sizeof(ui));
-    cudaMalloc((void**) &dGreen, dimX * dimY * sizeof(ui));
-    cudaMalloc((void**) &dBlue, dimX * dimY * sizeof(ui));
-    cudaMalloc((void**) &resultRed, dimX * dimY * sizeof(ui));
-    cudaMalloc((void**) &resultGreen, dimX * dimY * sizeof(ui));
-    cudaMalloc((void**) &resultBlue, dimX * dimY * sizeof(ui));
-    cudaMalloc((void**) &dFilter, FW * FH * sizeof(ui));
+	fileRed<<dimX<<" "<<dimY<<endl;
 
+	for(int i=0; i<dimX; i++) {
+		for(int j=0; j<dimY; j++) {
+			fileRed<<red[i][j]<<" ";
+			fileGreen<<green[i][j]<<" ";
+			fileBlue<<blue[i][j]<<" ";
+		}
+		fileRed<<endl;
+		fileGreen<<endl;
+		fileBlue<<endl;
+	}
 
-    cudaMemcpy(dRed, red, dimX * dimY * sizeof(ui), cudaMemcpyHostToDevice);
-    cudaMemcpy(dGreen, green, dimX * dimY * sizeof(ui), cudaMemcpyHostToDevice);
-    cudaMemcpy(dBlue, blue, dimX * dimY * sizeof(ui), cudaMemcpyHostToDevice);
-    cudaMemcpy(dFilter, filter, FW * FH * sizeof(ui), cudaMemcpyHostToDevice);
-
-    dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
-    dim3 dimGrid(N/dimBlock.x, N/dimBlock.y);
-
-    convoluteOnDevice<<<dimGrid, dimBlock>>>(dRed, dGreen, dBlue, dFilter,
-     	resultRed, resultGreen, resultBlue, dimX, dimY);
 	/*for(int x=0; x<dimX; x++) {
 		for(int y=0; y<dimY; y++) {
 			ui redSum = 0;
@@ -136,7 +129,7 @@ int main(int argc, char *argv[]) {
 		}
 	}*/
 
-    cudaMemcpy(red, resultRed, dimX * dimY * sizeof(ui), cudaMemcpyDeviceToHost);
+    /*cudaMemcpy(red, resultRed, dimX * dimY * sizeof(ui), cudaMemcpyDeviceToHost);
     cudaMemcpy(green, resultGreen, dimX * dimY * sizeof(ui), cudaMemcpyDeviceToHost);
     cudaMemcpy(blue, resultBlue, dimX * dimY * sizeof(ui), cudaMemcpyDeviceToHost);
 
@@ -153,9 +146,9 @@ int main(int argc, char *argv[]) {
 			Color newColor = Color(red[i][j], green[i][j], blue[i][j]);
 			image.pixelColor(i, j, newColor);
 		}
-	}
+	}*/
 
-	image.write("out.png");
+	image.write("find-edges.png");
 
   	cout<<"Image dimensions: "<<dimX<<"x"<<dimY<<endl;
     return 0;
