@@ -4,7 +4,6 @@
 
 #define FH 3
 #define FW 3
->>>>>>> Stashed changes
 using namespace std;
 using namespace Magick;
 typedef unsigned int ui;
