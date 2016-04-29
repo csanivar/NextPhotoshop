@@ -1,8 +1,14 @@
 #include <iostream>
 #include <Magick++.h>
+#include "device_launch_parameters.h"
+#include "cuda.h"
+#include "cuda_runtime.h"
+#include "cuda_device_runtime_api.h"
 
 #define FH 5
 #define FW 5
+#define HANDLE_ERROR( err ) (HandleError( err, __FILE__, __LINE__ ))
+const int BLOCK_SIZE=50;
 using namespace std;
 using namespace Magick;
 typedef unsigned int ui;
@@ -18,6 +24,45 @@ int filter[FW][FH] =
 	0, 0, 0, 1, 0,
 	0, 0, 0, 0, 1,
 };
+
+
+static void HandleError( cudaError_t err,
+                         const char *file,
+                         int line ) {
+    if (err != cudaSuccess) {
+        printf( "%s in %s at line %d\n", cudaGetErrorString( err ),
+                file, line );
+        exit( EXIT_FAILURE );
+    }
+}
+
+__global__ void convoluteOnDevice(ui* dRed, ui* dGreen, ui* dBlue, ui* dFilter,
+						ui* resultRed, ui* resultGreen, ui* resultBlue, int dimX, int dimY) {
+    ui valRed = 0;
+    ui valGreen = 0;
+    ui valBlue = 0;
+
+    unsigned int row = blockIdx.y * BLOCK_SIZE + threadIdx.y;
+    unsigned int col = blockIdx.x * BLOCK_SIZE + threadIdx.x;
+
+    if (row > N || col > N) {
+        return;
+    }
+
+    for (int i = 0; i < FW; i++) {
+    	for(int j=0; j < FH; j++) {
+    		int imageX = (row - FW/2  + i + dimX) % dimX; 
+			int imageY = (col - FH/2  + fY + dimY) % dimY;
+			valRed += dRed[imageX * dimX + imageY] * filter[i * FW + j];
+			valGreen += dGreen[imageX * dimX + imageY] * filter[i * FW + j];
+			valBlue += dBlue[imageX * dimX + imageY] * filter[i * FW + j];
+    	}
+    }
+
+    resultRed[row * dimX + col] = factor * valRed + bias;
+    resultGreen[row * dimX + col] = factor * valGreen + bias;
+    resultBlue[row * dimX + col] = factor * valBlue + bias;
+}
 
 
 int main(int argc, char *argv[]) {
@@ -43,8 +88,34 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	ui* dRed;
+	ui* dGreen;
+	ui* dBlue;
+	ui* resultRed;
+	ui* resultGreen;
+	ui* resultBlue;
+	ui* dFilter;
 
-	for(int x=0; x<dimX; x++) {
+    cudaMalloc((void**) &dRed, dimX * dimY * sizeof(ui));
+    cudaMalloc((void**) &dGreen, dimX * dimY * sizeof(ui));
+    cudaMalloc((void**) &dBlue, dimX * dimY * sizeof(ui));
+    cudaMalloc((void**) &resultRed, dimX * dimY * sizeof(ui));
+    cudaMalloc((void**) &resultGreen, dimX * dimY * sizeof(ui));
+    cudaMalloc((void**) &resultBlue, dimX * dimY * sizeof(ui));
+    cudaMalloc((void**) &dFilter, FW * FH * sizeof(ui));
+
+
+    cudaMemcpy(dRed, red, dimX * dimY * sizeof(ui), cudaMemcpyHostToDevice);
+    cudaMemcpy(dGreen, green, dimX * dimY * sizeof(ui), cudaMemcpyHostToDevice);
+    cudaMemcpy(dBlue, blue, dimX * dimY * sizeof(ui), cudaMemcpyHostToDevice);
+    cudaMemcpy(dFilter, filter, FW * FH * sizeof(ui), cudaMemcpyHostToDevice);
+
+    dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
+    dim3 dimGrid(N/dimBlock.x, N/dimBlock.y);
+
+    convoluteOnDevice<<<dimGrid, dimBlock>>>(dRed, dGreen, dBlue, dFilter,
+     	resultRed, resultGreen, resultBlue, dimX, dimY);
+	/*for(int x=0; x<dimX; x++) {
 		for(int y=0; y<dimY; y++) {
 			ui redSum = 0;
 			ui greenSum = 0;
@@ -63,8 +134,19 @@ int main(int argc, char *argv[]) {
 			green[x][y] = factor * greenSum + bias;
 			blue[x][y] = factor * blueSum + bias;
 		}
-	}
+	}*/
 
+    cudaMemcpy(red, resultRed, dimX * dimY * sizeof(ui), cudaMemcpyDeviceToHost);
+    cudaMemcpy(green, resultGreen, dimX * dimY * sizeof(ui), cudaMemcpyDeviceToHost);
+    cudaMemcpy(blue, resultBlue, dimX * dimY * sizeof(ui), cudaMemcpyDeviceToHost);
+
+    cudaFree(dRed);
+    cudaFree(dGreen);
+    cudaFree(dBlue);
+    cudaFree(dFilter);
+    cudaFree(resultRed);
+    cudaFree(resultGreen);
+    cudaFree(resultBlue);
 
 	for(int i=0; i<dimX; i++) {
 		for(int j=0; j<dimY; j++) {
