@@ -59,7 +59,7 @@ int filter[FW][FH] =
 int main(int argc, char *argv[]) {
 	InitializeMagick(*argv);
 	
-	Image image("great-perhaps.png");
+	Image image("res9.jpg");
 	dimX = image.rows();
 	dimY = image.columns();
 
@@ -79,9 +79,9 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	ofstream fileRed("red");
-	ofstream fileGreen("green");
-	ofstream fileBlue("blue");
+	ofstream fileRed("red9");
+	ofstream fileGreen("green9");
+	ofstream fileBlue("blue9");
 
 	fileRed<<dimX<<" "<<dimY<<endl;
 
