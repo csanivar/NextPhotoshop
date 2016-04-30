@@ -27,17 +27,6 @@ int filter[FW][FH] =
 	-1, -1, -1
 };
 
-
-static void HandleError( cudaError_t err,
-                         const char *file,
-                         int line ) {
-    if (err != cudaSuccess) {
-        printf( "%s in %s at line %d\n", cudaGetErrorString( err ),
-                file, line );
-        exit( EXIT_FAILURE );
-    }
-}
-
 /*__global__ void convoluteOnDevice(ui* dRed, ui* dGreen, ui* dBlue, ui* dFilter,
 						ui* resultRed, ui* resultGreen, ui* resultBlue, int dimX, int dimY) {
     ui valRed = 0;
@@ -149,6 +138,6 @@ int main(int argc, char *argv[]) {
 
 	image.write("find-edges.png");
 
-  	cout<<"Image dimensions: "<<dimX<<"x"<<dimY<<endl;
+  	// cout<<"Image dimensions: "<<dimX<<"x"<<dimY<<endl;
     return 0;
 }

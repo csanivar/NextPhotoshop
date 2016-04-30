@@ -1,13 +1,14 @@
 #include <iostream>
 #include <fstream>
+#include <time.h>
 
-#define FW 5
-#define FH 5
+#define FW 3
+#define FH 3
 
 typedef unsigned int ui;
 using namespace std;
 
-int filter[FW][FH] = 
+int filter[5][5] = 
 {
 	1, 0, 0, 0, 0,
 	0, 1, 0, 0, 0,
@@ -16,27 +17,58 @@ int filter[FW][FH] =
 	0, 0, 0, 0, 1,
 };
 
-double factor = 1.0/13.0;
+double filterGaussian[5][5] = 
+{
+	1.0/16.0, 4.0/16.0, 6.0/16.0, 4.0/16.0, 1.0/16.0,
+	4.0/16.0, 16.0/16.0, 24.0/16.0, 16.0/16.0, 4.0/16.0,
+	6.0/16.0, 24.0/16.0, 36.0/16.0, 24.0/16.0, 6.0/16.0,
+	4.0/16.0, 16.0/16.0, 24.0/16.0, 16.0/16.0, 4.0/16.0,
+	1.0/16.0, 4.0/16.0, 6.0/16.0, 4.0/16.0, 1.0/16.0,
+};
+
+double filterFindHorEdges[5][5] =
+{
+   0,  0, -1,  0,  0,
+   0,  0, -1,  0,  0,
+   0,  0,  2,  0,  0,
+   0,  0,  0,  0,  0,
+   0,  0,  0,  0,  0,
+};
+
+double filterLaplacian[3][3] = 
+{
+	0, 1, 0,
+	1, -4, 1,
+	0, 1, 0
+};
+
+double factor = 1.0;
 double bias = 0.0;
+
+double factorGaussian = 1.0/5.0;
 
 int main(int argc, char** argv) {
 	ifstream fileRed("red");
 	ifstream fileGreen("green");
 	ifstream fileBlue("blue");
-	ofstream fileOutRed("out_red");
-	ofstream fileOutGreen("out_green");
-	ofstream fileOutBlue("out_blue");
+	ofstream fileOutRed("out_red_g");
+	ofstream fileOutGreen("out_green_g");
+	ofstream fileOutBlue("out_blue_g");
+	clock_t start, end;
+    double elapsed;
+    start = clock();
 
-	const int dimW = 600;
-	const int dimH = 600; 
-	int temp;
-	fileRed>>temp>>temp;
-	fileGreen>>temp>>temp;
-	fileBlue>>temp>>temp;
+	int dimW;
+	int dimH; 
+	fileRed>>dimW;
+	fileRed>>dimH;
 	
 	ui red[dimW][dimH];
 	ui green[dimW][dimH];
 	ui blue[dimW][dimH];
+	ui resultRed[dimW][dimH];
+	ui resultGreen[dimW][dimH];
+	ui resultBlue[dimW][dimH];
 
 	for(int i=0; i<dimW; i++) {
 		for(int j=0; j<dimH; j++) {
@@ -56,26 +88,28 @@ int main(int argc, char** argv) {
 				for(int fY=0; fY<FH; fY++) {
 					int imageX = (x - FW/2  + fX + dimW) % dimW; 
 					int imageY = (y - FH/2  + fY + dimH) % dimH;
-					redSum += red[imageX][imageY] * filter[fX][fY];
-					greenSum += green[imageX][imageY] * filter[fX][fY];
-					blueSum += blue[imageX][imageY] * filter[fX][fY];
+					redSum += red[imageX][imageY] * filterLaplacian[fX][fY];
+					greenSum += green[imageX][imageY] * filterLaplacian[fX][fY];
+					blueSum += blue[imageX][imageY] * filterLaplacian[fX][fY];
 				}
 			}
-			red[x][y] = factor * redSum + bias;
-			green[x][y] = factor * greenSum + bias;
-			blue[x][y] = factor * blueSum + bias;
+			resultRed[x][y] = factor * redSum + bias;
+			resultGreen[x][y] = factor * greenSum + bias;
+			resultBlue[x][y] = factor * blueSum + bias;
 		}
 	}
 
+	fileOutRed<<dimW<<" "<<dimH<<endl;
 
 	for(int i=0; i<dimW; i++) {
 		for(int j=0; j<dimH; j++) {
-			fileOutRed<<red[i][j]<<" ";
-			fileOutGreen<<green[i][j]<<" ";
-			fileOutBlue<<blue[i][j]<<" ";
+			fileOutRed<<resultRed[i][j]<<" ";
+			fileOutGreen<<resultGreen[i][j]<<" ";
+			fileOutBlue<<resultBlue[i][j]<<" ";
 		}
 	}
-
-	cout<<"Dimenstions are: "<<dimW<<" "<<dimH<<endl;
+	end = clock();
+ 	elapsed = ((double) (end - start)) / CLOCKS_PER_SEC;
+ 	cout<<"Elapsed time: "<<elapsed<<endl;
 	return 0;
 }

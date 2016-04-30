@@ -7,13 +7,17 @@ using namespace Magick;
 typedef unsigned int ui;
 
 int main(int argc, char** argv) {
-	ifstream fileInputRed("out_red");
-	ifstream fileInputGreen("out_green");
-	ifstream fileInputBlue("out_blue");
-	Image image("great-perhaps.png");
+	ifstream fileInputRed("out_red_g");
+	ifstream fileInputGreen("out_green_g");
+	ifstream fileInputBlue("out_blue_g");
 	
-	const int dimW=600;
-	const int dimH=600;
+	int dimW;
+	int dimH;
+	fileInputRed>>dimW;
+	fileInputRed>>dimH;
+	cout<<dimW<<"x"<<dimH<<endl;
+	Image image("great-perhaps.png");
+	cout<<image.rows()<<" "<<image.columns()<<endl;
 
 	for(int i=0; i<dimW; i++) {
 		for(int j=0; j<dimH; j++) {
@@ -26,7 +30,7 @@ int main(int argc, char** argv) {
 		}
 	}
 
-	image.write("output_image.png");
+	image.write("serial_laplacian_out.png");
 
 	return 0;
 }

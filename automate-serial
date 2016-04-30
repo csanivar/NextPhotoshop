@@ -1,0 +1,11 @@
+#!/bin/bash 
+
+for i in 0 1 2 3 4 5 6 7 8 9;
+do
+find -type f -name "main.cpp" -exec sed -i "s/res[0-9]/res$i/g" {} \;
+c++ `Magick++-config --cxxflags --cppflags` -O2 -o main main.cpp \
+ `Magick++-config --ldflags --libs` ;
+./main;
+c++ -o ip_serial ip_serial.cpp;
+./ip_serial;
+done; 
